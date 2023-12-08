@@ -9,6 +9,7 @@ export default function Index({
 {
   
   return (
+    <div className='justify-center items-center flex mt-12'>
     <div className='bg-primary w-[400px] h-[600px] shadow-lg rounded-lg flex flex-col justify-center items-center'>
       <div className='text-4xl font-bold'>
         Welcome {isSignIn ? 'Back!' : ''}
@@ -29,6 +30,7 @@ export default function Index({
             isSignIn ? 'Sign up' : 'Sign in'
           }
         </span>
+      </div>
       </div>
 
     </div>
