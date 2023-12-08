@@ -7,7 +7,7 @@ mongoose.connect(url,{
     useNewUrlParser: true, //to avoid deprecation warning
     useUnifiedTopology: true, //to avoid deprecation warning 
 }).then(()=>{
-    console.log(`Connection Successful`);
+    console.log(`Connection Successful!`);
 }).catch((e)=>{
     console.log(`No Connection`);
 })
