@@ -1,5 +1,6 @@
 import React from 'react'
 import Input from '../../components/Input'
+import { useNavigate } from 'react-router-dom'
 
 export default function Index({
   isSignIn= true
@@ -8,8 +9,9 @@ export default function Index({
 
 {
   
+  const navigation = useNavigate()
   return (
-    <div className='justify-center items-center flex mt-12'>
+    <div className='justify-center items-center flex mt-12 bg-light'>
     <div className='bg-primary w-[400px] h-[600px] shadow-lg rounded-lg flex flex-col justify-center items-center'>
       <div className='text-4xl font-bold'>
         Welcome {isSignIn ? 'Back!' : ''}
@@ -25,7 +27,7 @@ export default function Index({
           isSignIn ? 'New to our platform?' : 'Already have an account?'
         }
 
-        <span className='cursor-pointer text-[blue] underline ml-1'>
+        <span onClick={()=>navigation(`/users/${isSignIn? 'signup': 'signin'}`)} className='cursor-pointer text-[blue] underline ml-1'>
           {
             isSignIn ? 'Sign up' : 'Sign in'
           }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 export default function Index({
   isSignIn
@@ -13,6 +14,8 @@ export default function Index({
     email: '',
     password: ''
   })
+
+  const navigation = useNavigate()
 
   return (
     <div className='mt-4'>
@@ -31,7 +34,7 @@ export default function Index({
         }
 
         <label className='text-xl font-light'>Email</label>
-        <input className='border-2 border-gray-300 rounded-md px-4 py-2 outline-none focus:border-blue-500 mb-4'
+        <input className='border-2 border-gray-300 rounded-md px-4 py-2 outline-none focus:border-blue-500 mb-4 w-[300px]'
           placeholder='Enter your email' name='email' type='email' required
           value={data.email} onChange={(e) => setData({ ...data, email: e.target.value })} />
 
@@ -45,6 +48,7 @@ export default function Index({
           {
             isSignIn ? 'Sign in' : 'Sign up'
           }
+          
         </button>
 
       </form>
