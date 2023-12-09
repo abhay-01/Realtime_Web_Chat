@@ -12,7 +12,10 @@ app.use(bodyParser.json());
 
 require('./db/connection');
 require('./models/user.model');
+
 const Users = require('./models/user.model');
+const Conversation = require('./models/conversation.model');
+const Message = require('./models/messages.models');
 
 
 //Routes
@@ -23,91 +26,166 @@ app.get('/', (req, res) => {
 
 
 //Signup
-app.post("/api/register", async (req,res)=>{
-    try{
-        const {fullName,email,password} = req.body;
+app.post("/api/register", async (req, res) => {
+    try {
+        const { fullName, email, password } = req.body;
 
-        if(!fullName || !email || !password){
-            return res.status(422).json({error:"Please fill all the fields"});
-        }else{
-           const isAlready = await Users.findOne({email});
-             if(isAlready){
-                  return res.status(422).json({error:"User already exist"});
-             }else{
-                    const user = new Users({fullName,email,password});
+        if (!fullName || !email || !password) {
+            return res.status(422).json({ error: "Please fill all the fields" });
+        } else {
+            const isAlready = await Users.findOne({ email });
+            if (isAlready) {
+                return res.status(422).json({ error: "User already exist" });
+            } else {
+                const user = new Users({ fullName, email, password });
 
-                    bcrypt.hash(password, 10, function(err, hash) {
-                        if(err){
-                            return res.status(422).json({error:"Something went wrong"});
-                        }
-                        user.password = hash;
-                        user.save().then(()=>{
-                            res.status(201).json({message:"User registered successfully"});
-                        }).catch((err)=>{
-                            res.status(500).json({error:"Failed to registered"});
-                        });
-                    });
+                bcrypt.hash(password, 10, function (err, hash) {
+                    if (err) {
+                        return res.status(422).json({ error: "Something went wrong" });
                     }
-             }
-        
-    }catch(err){
-        console.log("error-->",err);
+                    user.password = hash;
+                    user.save().then(() => {
+                        res.status(201).json({ message: "User registered successfully" });
+                    }).catch((err) => {
+                        res.status(500).json({ error: "Failed to registered" });
+                    });
+                });
+            }
+        }
+
+    } catch (err) {
+        console.log("error-->", err);
     }
 });
 
 
 //Login
-app.post("/api/login", async (req,res)=>{
-    try{
-        const {email,password} = req.body;
-        if(!email || !password){
-            return res.status(422).json({error:"Please fill all the fields"});
-        }else{
-            const user = await Users.findOne({email});
-            if(user){
-                bcrypt.compare(password, user.password, function(err, result) {
+app.post("/api/login", async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(422).json({ error: "Please fill all the fields" });
+        } else {
+            const user = await Users.findOne({ email });
+            if (user) {
+                bcrypt.compare(password, user.password, function (err, result) {
                     // result == true
-                    if(err){
-                        return res.status(422).json({error:"Something went wrong"});
+                    if (err) {
+                        return res.status(422).json({ error: "Something went wrong" });
                     }
-                    if(result){
+                    if (result) {
                         const payload = {
                             id: user._id,
                             email: user.email
                         }
 
-                        const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY  || "mysecretkey";
-                        
-                        jwt.sign(payload, JWT_SECRET_KEY,{expiresIn: '1h'}, async(err,token,next)=>{
+                        const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY || "mysecretkey";
 
-                            await Users.updateOne({_id:user._id},
+                        jwt.sign(payload, JWT_SECRET_KEY, { expiresIn: '1h' }, async (err, token, next) => {
+
+                            await Users.updateOne({ _id: user._id },
                                 {
-                                    $set:{
+                                    $set: {
                                         token
                                     }
                                 })
-                                user.save();
-                                return res.status(200).json({message:"Login successfully",user,token:token});
-                                next();
+                            user.save();
+                            return res.status(200).json({ message: "Login successfully", user, token: token });
+                            next();
                         });
 
-                    }else{
-                        return res.status(422).json({error:"Invalid credentials"});
+                    } else {
+                        return res.status(422).json({ error: "Invalid credentials" });
                     }
                 });
-            }else{
-                return res.status(422).json({error:"Invalid credentials"});
+            } else {
+                return res.status(422).json({ error: "Invalid credentials" });
             }
         }
-    }catch(err){
-        console.log("error-->",err);
+    } catch (err) {
+        console.log("error-->", err);
     }
 });
 
 
+//Conversation
+
+app.post("/api/conversation", async (req,res)=>{
+
+    const {senderId,receiverId} = req.body;
+
+    const conversation = new Conversation({
+        members:[senderId,receiverId]
+    });
+
+    try{
+        const savedConversation = await conversation.save();
+        res.status(201).json({message:"Conversation created successfully",savedConversation});
+    }
+    catch(err){
+        res.status(500).json({error:"Something went wrong"});
+    }
+});
 
 
+//conversation by userId    
+app.get("/api/conversation/:userId", async (req,res)=>{
+    try{
+        const conversation = await Conversation.find({
+            members:{$in:[req.params.userId]}
+        });
+            
+        const conversationUserData = Promise.all(conversation.map(async(conversation)=>{
+            const receiverId =   conversation.members.find(member=>member!== req.params.userId);
+            const user = await Users.findById(receiverId);
+            return {
+                user:{email:user.email,fullName:user.fullName},
+                conversationId:conversation._id
+            }
+        }));
+        console.log("conversationUserData-->",await conversationUserData);
+        res.status(200).json(await conversationUserData);
+    }
+    catch(err){
+        res.status(500).json({error:"Something went wrong"});
+    }
+}
+);
+
+
+//Message
+
+app.post("/api/message", async (req,res)=>{
+    const {conversationId,senderId,message} = req.body;
+
+    const newMessage = new Message({
+        conversationId,
+        senderId,
+        message
+    });
+
+    try{
+        const savedMessage = await newMessage.save();
+        res.status(201).json({message:"Message saved successfully",savedMessage});
+    }
+    catch(err){
+        res.status(500).json({error:"Something went wrong"});
+    }
+});
+
+
+//Get message by conversationId
+
+app.get("/api/message/:conversationId", async (req,res)=>{
+    try{
+        const messages = await Message.find({conversationId:req.params.conversationId});
+        res.status(200).json({"messages":messages});
+    }
+    catch(err){
+        res.status(500).json({error:"Something went wrong"});
+    }
+});
 
 app.listen(8000, ()=>{
-    console.log("Server is running on port 8000");
+    console.log("Server is running at port 8000");
 })

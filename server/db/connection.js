@@ -6,6 +6,8 @@ const url = "mongodb+srv://pratapsinghabhay999:meerut123@cluster0.tjoaebt.mongod
 mongoose.connect(url,{
     useNewUrlParser: true, //to avoid deprecation warning
     useUnifiedTopology: true, //to avoid deprecation warning 
+   
+
 }).then(()=>{
     console.log(`Connection Successful!`);
 }).catch((e)=>{
