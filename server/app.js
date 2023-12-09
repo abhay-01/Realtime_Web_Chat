@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const app = express();
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 //Use
 app.use(express.json());
@@ -35,9 +36,7 @@ app.post("/api/register", async (req,res)=>{
              }else{
                     const user = new Users({fullName,email,password});
 
-                    //Hashing password
                     bcrypt.hash(password, 10, function(err, hash) {
-                        // Store hash in your password DB.
                         if(err){
                             return res.status(422).json({error:"Something went wrong"});
                         }
@@ -72,7 +71,26 @@ app.post("/api/login", async (req,res)=>{
                         return res.status(422).json({error:"Something went wrong"});
                     }
                     if(result){
-                        res.status(201).json({message:"User logged in successfully"});
+                        const payload = {
+                            id: user._id,
+                            email: user.email
+                        }
+
+                        const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY  || "mysecretkey";
+                        
+                        jwt.sign(payload, JWT_SECRET_KEY,{expiresIn: '1h'}, async(err,token,next)=>{
+
+                            await Users.updateOne({_id:user._id},
+                                {
+                                    $set:{
+                                        token
+                                    }
+                                })
+                                user.save();
+                                return res.status(200).json({message:"Login successfully",user,token:token});
+                                next();
+                        });
+
                     }else{
                         return res.status(422).json({error:"Invalid credentials"});
                     }
@@ -87,8 +105,6 @@ app.post("/api/login", async (req,res)=>{
 });
 
 
-
-//Chat
 
 
 
