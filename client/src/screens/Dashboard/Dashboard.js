@@ -1,6 +1,8 @@
-import React from 'react'
+import React, { useState,useEffect} from 'react'
 
 export default function Dashboard() {
+    const img="https://inst.eecs.berkeley.edu/~cs194-26/fa17/upload/files/proj4/cs194-26-adq/asianguy.jpg";
+
     const chats = [
         {
             name: "John Doe",
@@ -29,7 +31,30 @@ export default function Dashboard() {
             img: "https://1.img-dpreview.com/files/p/TS560x560~forums/63132016/2a1e59e12f4543bea10f2385259c81cf"
         },
     ]
-    return (
+
+    useEffect(()=>{
+        const fetchConversations = async()=>{
+            const user = JSON.parse(localStorage.getItem('user:details'));
+            try{
+                const response = await fetch('http://localhost:8000/api/conversation/'+user._id);
+                const result = await response.json();
+                console.log("result-->",result);
+                setConversation(result);
+            }
+            catch(err){
+                console.log(err);
+            }
+        }
+
+        fetchConversations();
+    },[]);
+
+    const[user,setUser] = useState(JSON.parse(localStorage.getItem('user:details')))
+    const[conversation,setConversation] = useState([]);
+
+    // console.log("user-->",user);
+    console.log("conversation-->",conversation)
+        return (
         <div className='w-screen flex'>
 
             <div className='w-[25%] h-screen  bg-secondary'>
@@ -39,7 +64,7 @@ export default function Dashboard() {
 
                     </div>
                     <div className='ml-8'>
-                        <h2 className='text-xl'>Welcome, User</h2>
+                        <h2 className='text-xl'>Welcome, {user?.fullName}</h2>
                         <p className='text-lg font-light'>My Account</p>
                     </div>
                 </div>
@@ -50,7 +75,7 @@ export default function Dashboard() {
                     </div>
                     <div>
                         {
-                            chats.map(({ name, status, img }) => {
+                            conversation.map(({conversationId,user}) => {
                                 return (
                                     <div className='flex ml-2 items-center my-8 border-b py-3 border-b-gray-400 '>
                                         <div className='cursor-pointer flex items-center'>
@@ -59,8 +84,8 @@ export default function Dashboard() {
 
                                             </div>
                                             <div className='ml-6'>
-                                                <h2 className='text-lg font-semibold'>{name}</h2>
-                                                <p className='text-sm font-light text-gray-600'>{status}</p>
+                                                <h2 className='text-lg font-semibold'>{user?.fullName}</h2>
+                                                <p className='text-sm font-light text-gray-600'>{user?.email}</p>
                                             </div>
                                         </div>
                                     </div>

@@ -78,7 +78,8 @@ app.post("/api/login", async (req, res) => {
                     if (result) {
                         const payload = {
                             id: user._id,
-                            email: user.email
+                            email: user.email,
+                            fullName: user.fullName
                         }
 
                         const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY || "mysecretkey";
@@ -137,6 +138,9 @@ app.get("/api/conversation/:userId", async (req,res)=>{
             members:{$in:[req.params.userId]}
         });
             
+        if(!conversation){
+            return res.status(422).json([]);
+        }
         const conversationUserData = Promise.all(conversation.map(async(conversation)=>{
             const receiverId =   conversation.members.find(member=>member!== req.params.userId);
             const user = await Users.findById(receiverId);
