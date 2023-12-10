@@ -156,7 +156,28 @@ app.get("/api/conversation/:userId", async (req,res)=>{
 //Message
 
 app.post("/api/message", async (req,res)=>{
-    const {conversationId,senderId,message} = req.body;
+    const {conversationId,senderId,message,receiverId=''} = req.body;
+
+    if(!senderId || !message){
+        return res.status(422).json({error:"Please fill all the fields"});
+    }
+
+    if(!conversationId && receiverId){
+        const conversation = new Conversation({
+            members:[senderId,receiverId]
+        });
+
+        await conversation.save();
+        const newMessage = new Message({
+            conversationId:conversation._id,
+            senderId,
+            message
+        });
+        await newMessage.save();
+        return res.status(201).json({message:"Message saved successfully",newMessage}); 
+    }else if(!conversationId && !receiverId){
+        return res.status(422).json({error:"Please fill all the fields"});
+    }
 
     const newMessage = new Message({
         conversationId,
@@ -176,15 +197,45 @@ app.post("/api/message", async (req,res)=>{
 
 //Get message by conversationId
 
-app.get("/api/message/:conversationId", async (req,res)=>{
+app.get('/api/message/:conversationId', async(req,res)=>{
     try{
+        if(req.params.conversationId === "undefined"){
+            req.status(200).json([]);
+        }
         const messages = await Message.find({conversationId:req.params.conversationId});
-        res.status(200).json({"messages":messages});
+
+        res.status(200).json({messages});
     }
     catch(err){
         res.status(500).json({error:"Something went wrong"});
     }
 });
+
+
+//Get all users
+
+app.get("/api/users", async(req,res)=>{
+
+    try{
+        const users = await Users.find().select("-password");
+
+        const userData = Promise.all(users.map(async(user)=>{
+            return {
+                user:{
+                    email:user.email,
+                    fullName:user.fullName
+                },
+                userId:user._id
+            }
+        }));
+
+        res.status(200).json(await userData);
+
+    }catch(err){
+        console.log("error-->",err);
+    }
+})
+
 
 app.listen(8000, ()=>{
     console.log("Server is running at port 8000");
