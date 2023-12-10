@@ -5,7 +5,6 @@ export default function Index({
   isSignIn
 }) {
 
-
   const [data, setData] = useState({
     ...(!isSignIn && {
       fullName: ''
@@ -17,9 +16,57 @@ export default function Index({
 
   const navigation = useNavigate()
 
+  const handleSubmit = async(e) => {
+    e.preventDefault();
+
+    if(isSignIn){
+      //signin
+      const response = await fetch('http://localhost:8000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+
+      const result = await response.json();
+
+
+      if (result.token) {
+        localStorage.setItem('user:token', result.token)
+        localStorage.setItem('user:details', JSON.stringify(result.user))
+        navigation('/')
+      } else {
+        alert("User not found")
+      }
+    }else{
+      //signup
+      const response = await fetch('http://localhost:8000/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+
+      const result = await response.json();
+
+      if(result.message){
+        navigation('/users/signin');
+      }else{
+        alert(result.error)
+      }
+
+    
+    }
+
+   
+  }
+
+
   return (
     <div className='mt-4'>
-      <form className='flex flex-col' onSubmit={()=> console.log("Submitted!")}>
+      <form className='flex flex-col' onSubmit={(e)=> handleSubmit(e)}>
 
         {
           !isSignIn && (

@@ -4,6 +4,8 @@ const app = express();
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const cors = require('cors');
+app.use(cors());
 
 //Use
 app.use(express.json());
