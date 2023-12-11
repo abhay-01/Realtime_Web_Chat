@@ -149,7 +149,7 @@ app.get("/api/conversation/:userId", async (req,res)=>{
                 conversationId:conversation._id
             }
         }));
-        console.log("conversationUserData-->",await conversationUserData);
+        // console.log("conversationUserData-->",await conversationUserData);
         res.status(200).json(await conversationUserData);
     }
     catch(err){
@@ -210,7 +210,16 @@ app.get('/api/message/:conversationId', async(req,res)=>{
         }
         const messages = await Message.find({conversationId:req.params.conversationId});
 
-        res.status(200).json({messages});
+        const messageData = Promise.all(messages.map(async(message)=>{
+            const user = await Users.findById(message.senderId);
+            return {
+                message:message.message,
+                senderId:message.senderId,
+                id:user._id,
+                fullName:user.fullName
+            }
+        }));
+        res.status(200).json(await messageData);
     }
     catch(err){
         res.status(500).json({error:"Something went wrong"});

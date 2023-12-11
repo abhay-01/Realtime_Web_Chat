@@ -1,7 +1,12 @@
-import React, { useState,useEffect} from 'react'
+import React, { useState, useEffect } from 'react'
 
 export default function Dashboard() {
-    const img="https://inst.eecs.berkeley.edu/~cs194-26/fa17/upload/files/proj4/cs194-26-adq/asianguy.jpg";
+    const img = "https://inst.eecs.berkeley.edu/~cs194-26/fa17/upload/files/proj4/cs194-26-adq/asianguy.jpg";
+
+    const [user, setUser] = useState(JSON.parse(localStorage.getItem('user:details')))
+    const [conversation, setConversation] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [typeMessage, setTypeMessage] = useState('');
 
     const chats = [
         {
@@ -32,29 +37,64 @@ export default function Dashboard() {
         },
     ]
 
-    useEffect(()=>{
-        const fetchConversations = async()=>{
+    useEffect(() => {
+        const fetchConversations = async () => {
             const user = JSON.parse(localStorage.getItem('user:details'));
-            try{
-                const response = await fetch('http://localhost:8000/api/conversation/'+user._id);
+            try {
+                const response = await fetch('http://localhost:8000/api/conversation/' + user._id);
                 const result = await response.json();
-                console.log("result-->",result);
+                console.log("result-->", result);
                 setConversation(result);
             }
-            catch(err){
+            catch (err) {
                 console.log(err);
             }
         }
 
         fetchConversations();
-    },[]);
+    }, []);
 
-    const[user,setUser] = useState(JSON.parse(localStorage.getItem('user:details')))
-    const[conversation,setConversation] = useState([]);
 
-    // console.log("user-->",user);
-    console.log("conversation-->",conversation)
-        return (
+    const fetchMessages = async (conversationId) => {
+        try {
+            const response = await fetch('http://localhost:8000/api/message/' + conversationId);
+            const result = await response.json();
+            setMessages(result);
+            console.log("Conversation Id's-->", result);
+
+        } catch (err) {
+            console.log("error-->", err);
+        }
+    }
+
+    const sendMessage = async (conversationId, senderId, message) => {
+
+        console.log("all parameters", conversationId, senderId, message);
+        try {
+            const response = await fetch('http://localhost:8000/api/message', {
+                method:'POST',
+                headers:{
+                    'Content-Type':'application/json'
+                },
+                body:{
+                    conversationId:conversationId,
+                    senderId:senderId,
+                    message:message
+                }
+            });
+            
+        }catch(err){
+            console.log("error-->",err);
+        }
+    };
+
+    
+
+    console.log("user-->", user._id);
+    console.log("conversation-->", messages)
+    // console.log("sender-->",messages[0].senderId);
+
+    return (
         <div className='w-screen flex'>
 
             <div className='w-[25%] h-screen  bg-secondary'>
@@ -75,10 +115,12 @@ export default function Dashboard() {
                     </div>
                     <div>
                         {
-                            conversation.map(({conversationId,user}) => {
+                            conversation.length > 0 &&
+                            conversation.map(({ conversationId, user }) => {
                                 return (
                                     <div className='flex ml-2 items-center my-8 border-b py-3 border-b-gray-400 '>
-                                        <div className='cursor-pointer flex items-center'>
+                                        <div className='cursor-pointer flex items-center' onClick={() =>
+                                            fetchMessages(conversationId)}>
                                             <div className='p- [2px] rounded-full border border-primary bg-primary'>
                                                 <img src={img} alt="logo" width={35} height={20} className='h-[45px] w-[40px] rounded-full border border-primary bg-primary' />
 
@@ -101,7 +143,8 @@ export default function Dashboard() {
                         <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cmFuZG9tJTIwcGVyc29ufGVufDB8fDB8fHww" alt="logo" width={50} height={50} className='h-[50px] w-[48px] rounded-full border border-primary bg-primary' />
                     </div>
                     <div className='ml-5 mr-auto'>
-                        <h2 className='text-lg mx-4'>Adam Smith</h2>
+                    <h2 className='text-xl font-semibold'>  BOT</h2>
+
                         <p className='text-sm text-gray-600 mx-4'>online</p>
                     </div>
                     <div className='ml-auto cursor-pointer'>
@@ -117,36 +160,58 @@ export default function Dashboard() {
                         </div>
 
                         <div className='max-w-[40%] bg-primary rounded-b-xl rounded-tl-xl ml-auto mt-5 p-1 text-white'>
-                            Lorem ipsum dolor sit amet consectetur adipi Lorem ipsum dolor sit amet consectetur adipi
+                            Abhay
                         </div>
+                        {
+                            messages.length > 0 &&
+                            messages.map(({ message, id }) => {
+                                if (user._id === id) {
 
-                        <div className='max-w-[40%] bg-secondary rounded-b-xl rounded-tr-xl mt-5 p-1'>
-                            Lorem ipsum dolor sit amet consectetur adipi. Lorem ipsum dolor sit amet consectetur adipi
+                                    return (
 
-                        </div>
+                                        <div className='max-w-[40%] bg-primary rounded-b-xl rounded-tl-xl ml-auto mt-5 p-1 text-white'>
+                                            {message}
+                                        </div>
+                                    )
+                                } else {
+                                    return (
+                                        <div className='max-w-[40%] bg-secondary rounded-b-xl rounded-tr-xl mt-5 p-1'>
+                                            {message}
+                                        </div>
+                                    )
+                                }
 
-                        <div className='max-w-[40%] bg-primary rounded-b-xl rounded-tl-xl ml-auto mt-5 p-1 text-white'>
-                            Lorem ipsum dolor sit amet consectetur adipi Lorem ipsum dolor sit amet consectetur adipi
-                        </div>
+                            })
 
-                        <div className='max-w-[40%] bg-secondary rounded-b-xl rounded-tr-xl mt-5 p-1'>
-                            Lorem ipsum dolor sit amet consectetur adipi. Lorem ipsum dolor sit amet consectetur adipi
-                        </div>
-
-                        <div className='max-w-[40%] bg-primary rounded-b-xl rounded-tl-xl ml-auto mt-5 p-1 text-white'>
-                            Lorem ipsum dolor sit amet consectetur adipi Lorem ipsum dolor sit amet consectetur adipi
-                        </div>
+                        }
 
                     </div>
                 </div>
                 <div className='w-full p-6 flex items-center'>
-                    <input type="text" placeholder='Type a message...' className='w-[80%] p-4 border-0 rounded-full focus:ring-0 focus:outline-0 shadow-md bg-light' />
-                    <div className='p-4 mx-3 cursor-pointer bg-light rounded-full'>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-send" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M10 14l11 -11" /><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5" /></svg>
+                    <input type="text" placeholder='Type a message...' className='w-[80%] p-4 border-0 rounded-full 
+                    focus:ring-0 focus:outline-0 shadow-md bg-light' 
+                    value={typeMessage}
+                    onChange={(e)=> {
+                        setTypeMessage(e.target.value);
+                        console.log("typeMessage-->",typeMessage);
+                    }
+                    }
+                    />
+                    <div className= {'p-4 mx-3 cursor-pointer bg-light rounded-full '} onClick={()=> {
+                        sendMessage(conversation[0].conversationId, user._id, typeMessage);
+                        setTypeMessage('');
+                    }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-send" width="24" height="24"
+                         viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                          stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M10 14l11 -11" />
+                          <path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5" /></svg>
                     </div>
 
                     <div className='cursor-pointer bg-light rounded-full'>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-circle-plus" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M9 12h6" /><path d="M12 9v6" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-circle-plus" width="24" height="24" 
+                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" 
+                        stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" />
+                        <path d="M9 12h6" /><path d="M12 9v6" /></svg>
                     </div>
                 </div>
 
@@ -155,7 +220,7 @@ export default function Dashboard() {
 
             {/*Div for users and sender profile */}
             <div className='w-[25%] h-screen'>
-                
+
 
 
             </div>
