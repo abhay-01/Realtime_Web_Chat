@@ -165,13 +165,9 @@ app.get("/api/conversation/:userId", async (req,res)=>{
 app.post("/api/message", async (req,res)=>{
     const {conversationId,senderId,message,receiverId=''} = req.body;
 
-    if(!senderId){
-        return res.status(422).json({error:"Please fill senderId field"});
-    }
-
-    if(!message){
-        return res.status(422).json({error:"Please fill message field"});
-    }
+   if(!senderId || !message){
+         return res.status(422).json({error:"Please fill all the fields"});
+   }
 
     if(!conversationId && receiverId){
         const conversation = new Conversation({
