@@ -145,7 +145,8 @@ app.get("/api/conversation/:userId", async (req,res)=>{
             const receiverId =   conversation.members.find(member=>member!== req.params.userId);
             const user = await Users.findById(receiverId);
             return {
-                user:{email:user.email,fullName:user.fullName},
+                user:{
+                    receiverId:user._id,email:user.email,fullName:user.fullName},
                 conversationId:conversation._id
             }
         }));
@@ -164,8 +165,12 @@ app.get("/api/conversation/:userId", async (req,res)=>{
 app.post("/api/message", async (req,res)=>{
     const {conversationId,senderId,message,receiverId=''} = req.body;
 
-    if(!senderId || !message){
-        return res.status(422).json({error:"Please fill all the fields"});
+    if(!senderId){
+        return res.status(422).json({error:"Please fill senderId field"});
+    }
+
+    if(!message){
+        return res.status(422).json({error:"Please fill message field"});
     }
 
     if(!conversationId && receiverId){
@@ -177,20 +182,18 @@ app.post("/api/message", async (req,res)=>{
         const newMessage = new Message({
             conversationId:conversation._id,
             senderId,
-            message
+            message,
         });
         await newMessage.save();
         return res.status(201).json({message:"Message saved successfully",newMessage}); 
     }else if(!conversationId && !receiverId){
         return res.status(422).json({error:"Please fill all the fields"});
     }
-
     const newMessage = new Message({
         conversationId,
         senderId,
-        message
-    });
-
+        message,
+        });
     try{
         const savedMessage = await newMessage.save();
         res.status(201).json({message:"Message saved successfully",savedMessage});
@@ -202,7 +205,6 @@ app.post("/api/message", async (req,res)=>{
 
 
 //Get message by conversationId
-
 app.get('/api/message/:conversationId', async(req,res)=>{
     try{
         if(req.params.conversationId === "undefined"){
@@ -216,7 +218,7 @@ app.get('/api/message/:conversationId', async(req,res)=>{
                 message:message.message,
                 senderId:message.senderId,
                 id:user._id,
-                fullName:user.fullName
+                fullName:user.fullName,
             }
         }));
         res.status(200).json(await messageData);
