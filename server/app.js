@@ -5,6 +5,12 @@ const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const io = require('socket.io')(8001, {
+    cors: {
+        origin: 'http://localhost:3000',
+    }
+});   // socket.io server
+
 app.use(cors());
 
 //Use
@@ -18,6 +24,17 @@ require('./models/user.model');
 const Users = require('./models/user.model');
 const Conversation = require('./models/conversation.model');
 const Message = require('./models/messages.models');
+
+
+//Socket.io
+io.on('connection', (socket) => {
+    console.log("socket connected-->", socket.id);
+    // socket.on('addUser', userId => {
+    //     socket.join(userId);
+    // })
+    // io.emit("getUsers", socket.userId);
+});
+
 
 
 //Routes
@@ -113,48 +130,49 @@ app.post("/api/login", async (req, res) => {
 
 //Conversation
 
-app.post("/api/conversation", async (req,res)=>{
+app.post("/api/conversation", async (req, res) => {
 
-    const {senderId,receiverId} = req.body;
+    const { senderId, receiverId } = req.body;
 
     const conversation = new Conversation({
-        members:[senderId,receiverId]
+        members: [senderId, receiverId]
     });
 
-    try{
+    try {
         const savedConversation = await conversation.save();
-        res.status(201).json({message:"Conversation created successfully",savedConversation});
+        res.status(201).json({ message: "Conversation created successfully", savedConversation });
     }
-    catch(err){
-        res.status(500).json({error:"Something went wrong"});
+    catch (err) {
+        res.status(500).json({ error: "Something went wrong" });
     }
 });
 
 
 //conversation by userId    
-app.get("/api/conversation/:userId", async (req,res)=>{
-    try{
+app.get("/api/conversation/:userId", async (req, res) => {
+    try {
         const conversation = await Conversation.find({
-            members:{$in:[req.params.userId]}
+            members: { $in: [req.params.userId] }
         });
-            
-        if(!conversation){
+
+        if (!conversation) {
             return res.status(422).json([]);
         }
-        const conversationUserData = Promise.all(conversation.map(async(conversation)=>{
-            const receiverId =   conversation.members.find(member=>member!== req.params.userId);
+        const conversationUserData = Promise.all(conversation.map(async (conversation) => {
+            const receiverId = conversation.members.find(member => member !== req.params.userId);
             const user = await Users.findById(receiverId);
             return {
-                user:{
-                    receiverId:user._id,email:user.email,fullName:user.fullName},
-                conversationId:conversation._id
+                user: {
+                    receiverId: user._id, email: user.email, fullName: user.fullName
+                },
+                conversationId: conversation._id
             }
         }));
         // console.log("conversationUserData-->",await conversationUserData);
         res.status(200).json(await conversationUserData);
     }
-    catch(err){
-        res.status(500).json({error:"Something went wrong"});
+    catch (err) {
+        res.status(500).json({ error: "Something went wrong" });
     }
 }
 );
@@ -162,94 +180,106 @@ app.get("/api/conversation/:userId", async (req,res)=>{
 
 //Message
 
-app.post("/api/message", async (req,res)=>{
-    const {conversationId,senderId,message,receiverId=''} = req.body;
+app.post("/api/message", async (req, res) => {
+    const { conversationId, senderId, message, receiverId = '' } = req.body;
 
-   if(!senderId || !message){
-         return res.status(422).json({error:"Please fill all the fields"});
-   }
+    if (!senderId || !message) {
+        return res.status(422).json({ error: "Please fill all the fields" });
+    }
 
-    if(!conversationId && receiverId){
+    if (conversationId == "new" && receiverId) {
         const conversation = new Conversation({
-            members:[senderId,receiverId]
+            members: [senderId, receiverId]
         });
 
         await conversation.save();
         const newMessage = new Message({
-            conversationId:conversation._id,
+            conversationId: conversation._id,
             senderId,
             message,
         });
         await newMessage.save();
-        return res.status(201).json({message:"Message saved successfully",newMessage}); 
-    }else if(!conversationId && !receiverId){
-        return res.status(422).json({error:"Please fill all the fields"});
+        return res.status(201).json({ message: "Message saved successfully", newMessage });
+    } else if (!conversationId && !receiverId) {
+        return res.status(422).json({ error: "Please fill all the fields" });
     }
     const newMessage = new Message({
         conversationId,
         senderId,
         message,
-        });
-    try{
+    });
+    try {
         const savedMessage = await newMessage.save();
-        res.status(201).json({message:"Message saved successfully",savedMessage});
+        res.status(201).json({ message: "Message saved successfully", savedMessage });
     }
-    catch(err){
-        res.status(500).json({error:"Something went wrong"});
+    catch (err) {
+        res.status(500).json({ error: "Something went wrong" });
     }
 });
 
 
 //Get message by conversationId
-app.get('/api/message/:conversationId', async(req,res)=>{
-    try{
-        if(req.params.conversationId === "undefined"){
-            req.status(200).json([]);
-        }
-        const messages = await Message.find({conversationId:req.params.conversationId});
+app.get('/api/message/:conversationId', async (req, res) => {
 
-        const messageData = Promise.all(messages.map(async(message)=>{
-            const user = await Users.findById(message.senderId);
-            return {
-                message:message.message,
-                senderId:message.senderId,
-                id:user._id,
-                fullName:user.fullName,
+    try {
+        const checkMessages = async (conversationId) => {
+            const messages = await Message.find({ conversationId });
+            const messageData = Promise.all(messages.map(async (message) => {
+                const user = await Users.findById(message.senderId);
+                return {
+                    message: message.message,
+                    senderId: message.senderId,
+                    id: user._id,
+                    fullName: user.fullName,
+                }
+            }));
+            return res.status(200).json(await messageData);
+        }
+        if (req.params.conversationId === "new") {
+            const checkConversation = await Conversation.find({
+                members: { $all: [req.query.senderId, req.query.receiverId] }
+            });
+
+            if (checkConversation.length > 0) {
+                checkMessages(checkConversation[0]._id);
+            } else {
+                return res.status(200).json([]);
             }
-        }));
-        res.status(200).json(await messageData);
+        } else {
+            checkMessages(req.params.conversationId);
+        }
     }
-    catch(err){
-        res.status(500).json({error:"Something went wrong"});
+    catch (err) {
+        res.status(500).json({ error: "Something went wrong" });
     }
 });
 
 
 //Get all users
 
-app.get("/api/users", async(req,res)=>{
+app.get("/api/users", async (req, res) => {
 
-    try{
+    try {
         const users = await Users.find().select("-password");
 
-        const userData = Promise.all(users.map(async(user)=>{
+        const userData = Promise.all(users.map(async (user) => {
             return {
-                user:{
-                    email:user.email,
-                    fullName:user.fullName
+                user: {
+                    email: user.email,
+                    fullName: user.fullName,
+                    receiverId: user._id
                 },
-                userId:user._id
             }
         }));
 
         res.status(200).json(await userData);
 
-    }catch(err){
-        console.log("error-->",err);
+    } catch (err) {
+        console.log("error-->", err);
     }
 })
 
 
-app.listen(8000, ()=>{
+app.listen(8000, () => {
     console.log("Server is running at port 8000");
 })
