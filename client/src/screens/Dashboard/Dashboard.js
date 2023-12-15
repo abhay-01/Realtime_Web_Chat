@@ -10,8 +10,11 @@ export default function Dashboard() {
     const [people, setPeople] = useState([]);
     const [socket, setSocket] = useState(null);
 
+    
+
 
     console.log("messages!-->", messages);
+
     useEffect(() => {
         setSocket(io('http://localhost:8001'));
     }, []);
@@ -24,12 +27,12 @@ export default function Dashboard() {
         })
 
         socket?.on("getMessage", (data) => {
-            setMessages((prev) => ({
-                    ...prev,
-                    messages: [...prev.messages, { user:data.user, message: data.message }]
-                
-            }));
-            })
+
+            setMessages(prev => ({
+                ...prev,
+                messages: [...prev.messages,{ user: data.senderId, message: data.message }]
+            }))
+        })
     }, [socket]);
 
 
@@ -86,17 +89,17 @@ export default function Dashboard() {
     }
 
     const sendMessage = async () => {
+        socket?.emit("sendMessage", {
+            senderId: user?._id,
+            receiverId: messages?.receiver?.receiverId,
+            message: typeMessage,
+            conversationId: messages?.conversationId
+        });
 
-        
 
         // console.log("all parameters", messages?.conversationId, user?._id, typeMessage, messages?.receiver?.receiverId);
         try {
-            socket?.emit("sendMessage", {
-                senderId: user?._id,
-                receiverId: messages?.receiver?.receiverId,
-                message: typeMessage,
-                conversationId: messages?.conversationId
-            });
+           
 
             const response = await fetch('http://localhost:8000/api/message', {
                 method: 'POST',
@@ -261,7 +264,7 @@ export default function Dashboard() {
 
 
             {/*Div for users and sender profile */}
-            <div className='w-[25%] h-screen bg-light px-9 py-14'>
+            <div className='w-[25%] h-screen bg-light px-9 py-14 overflow-scroll'>
                 <div className='text-primary text-lg font-semibold'>
                     People
                 </div>
