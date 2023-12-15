@@ -27,13 +27,40 @@ const Message = require('./models/messages.models');
 
 
 //Socket.io
-io.on('connection', (socket) => {
-    console.log("socket connected-->", socket.id);
-    // socket.on('addUser', userId => {
-    //     socket.join(userId);
-    // })
-    // io.emit("getUsers", socket.userId);
-});
+
+let users = []; //it is for storing all the users in the chat app
+io.on('connection', socket => {
+    console.log("USER CONNECTED", socket.id);
+    socket.on("addUser", (userId) => {
+        const isUserOnline = users.find(user => user.userId === userId);
+        if (!isUserOnline) {
+            const user = { userId, socketId: socket.id };
+            users.push(user);
+            io.emit("getUsers", users);
+        }
+    });
+
+    socket.on("sendMessage", async ({ senderId, receiverId, message,conversationId }) => {
+        const receiver = users.find(user => user.userId === receiverId);
+        const sender = users.find(user => user.userId === senderId);
+        const user = await Users.findById(senderId);
+        if (receiver) {
+            io.to(receiver.socketId).to(sender.socketId).emit("getMessage", {
+                senderId,
+                message,
+                conversationId,
+                receiverId,
+                user: {id: user._id, fullName: user.fullName, email: user.email}
+            });
+        }
+    });
+
+    socket.on("disconnect", () => {
+        users = users.filter(user => user.socketId !== socket.id); //it will remove the user from the users array when user disconnects
+        io.emit("getUsers", users); //it will send the updated users array to the client side
+        console.log("USER DISCONNECTED", socket.id);
+    });
+})
 
 
 

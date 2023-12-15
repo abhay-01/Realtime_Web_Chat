@@ -1,21 +1,38 @@
 import React, { useState, useEffect } from 'react'
-import {io} from 'socket.io-client';
+import { io } from 'socket.io-client';
 
 export default function Dashboard() {
     const img = "https://inst.eecs.berkeley.edu/~cs194-26/fa17/upload/files/proj4/cs194-26-adq/asianguy.jpg";
-
     const [user, setUser] = useState(JSON.parse(localStorage.getItem('user:details')))
     const [conversation, setConversation] = useState([]);
     const [messages, setMessages] = useState({});
     const [typeMessage, setTypeMessage] = useState('');
     const [people, setPeople] = useState([]);
-    const [socket, setSocket] = useState([null]);
+    const [socket, setSocket] = useState(null);
 
+
+    console.log("messages!-->", messages);
+    useEffect(() => {
+        setSocket(io('http://localhost:8001'));
+    }, []);
 
 
     useEffect(() => {
-        setSocket(io('http://localhost:8080'));
-    },[]);
+        socket?.emit("addUser", user?.id);
+        socket?.on("getUsers", (users) => {
+            console.log("active users-->", users);
+        })
+
+        socket?.on("getMessage", (data) => {
+            setMessages((prev) => ({
+                    ...prev,
+                    messages: [...prev.messages, { user:data.user, message: data.message }]
+                
+            }));
+            })
+    }, [socket]);
+
+
     useEffect(() => {
         const fetchConversations = async () => {
             const user = JSON.parse(localStorage.getItem('user:details'));
@@ -53,7 +70,7 @@ export default function Dashboard() {
 
     const fetchMessages = async (conversationId, receiver) => {
         try {
-            const response = await fetch(`http://localhost:8000/api/message/${conversationId}?senderId=${user._id}&&receiverId=${receiver?.receiverId}}}`,{
+            const response = await fetch(`http://localhost:8000/api/message/${conversationId}?senderId=${user._id}&&receiverId=${receiver?.receiverId}}}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -70,8 +87,17 @@ export default function Dashboard() {
 
     const sendMessage = async () => {
 
-     console.log("all parameters", messages?.conversationId, user?._id, typeMessage, messages?.receiver?.receiverId);
+        
+
+        // console.log("all parameters", messages?.conversationId, user?._id, typeMessage, messages?.receiver?.receiverId);
         try {
+            socket?.emit("sendMessage", {
+                senderId: user?._id,
+                receiverId: messages?.receiver?.receiverId,
+                message: typeMessage,
+                conversationId: messages?.conversationId
+            });
+
             const response = await fetch('http://localhost:8000/api/message', {
                 method: 'POST',
                 headers: {
@@ -243,25 +269,25 @@ export default function Dashboard() {
                 {
                     people.length > 0 &&
                     people.map(({ userId, user }) => {
-                        if(userId !== JSON.parse(localStorage.getItem('user:details'))._id){
+                        if (user.receiverId !== JSON.parse(localStorage.getItem('user:details'))._id) {
 
-                        return (
+                            return (
 
-                            <div className='flex ml-2 items-center my-8 border-b py-3 border-b-gray-400 '>
-                                <div className='cursor-pointer flex items-center' onClick={() =>
-                                    fetchMessages('new', user)}>
-                                    <div className='p- [2px] rounded-full border border-primary bg-primary'>
-                                        <img src={img} alt="logo" width={35} height={20} className='h-[45px] w-[40px] rounded-full border border-primary bg-primary' />
+                                <div className='flex ml-2 items-center my-8 border-b py-3 border-b-gray-400 '>
+                                    <div className='cursor-pointer flex items-center' onClick={() =>
+                                        fetchMessages('new', user)}>
+                                        <div className='p- [2px] rounded-full border border-primary bg-primary'>
+                                            <img src={img} alt="logo" width={35} height={20} className='h-[45px] w-[40px] rounded-full border border-primary bg-primary' />
 
-                                    </div>
-                                    <div className='ml-6'>
-                                        <h2 className='text-lg font-semibold'>{user?.fullName}</h2>
-                                        <p className='text-sm font-light text-gray-600'>{user?.email}</p>
+                                        </div>
+                                        <div className='ml-6'>
+                                            <h2 className='text-lg font-semibold'>{user?.fullName}</h2>
+                                            <p className='text-sm font-light text-gray-600'>{user?.email}</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )
-                                }      
+                            )
+                        }
                     })
 
                 }
