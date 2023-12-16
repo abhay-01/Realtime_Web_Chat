@@ -35,6 +35,12 @@ io.on('connection', socket => {
     socket.on("addUser", (userId) => {
         const isUserOnline = users.find(user => user.userId === userId);
         if (!isUserOnline) {
+            console.log("not online-->", isUserOnline);
+            const user = { userId, socketId: socket.id };
+            users.push(user);
+            io.emit("getUsers", users);
+        }else{
+            console.log("isUserOnline-->", isUserOnline);
             const user = { userId, socketId: socket.id };
             users.push(user);
             io.emit("getUsers", users);
@@ -45,7 +51,7 @@ io.on('connection', socket => {
         const receiver = users.find(user => user.userId === receiverId);
         const sender = users.find(user => user.userId === senderId);
         const user = await Users.findById(senderId);
-        console.log("sender-->", sender, receiver)
+        console.log("sender-->",sender,receiver)
         if (receiver) {
             io.to(receiver.socketId).to(sender.socketId).emit("getMessage", {
                 senderId,

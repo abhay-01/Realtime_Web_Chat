@@ -22,19 +22,18 @@ export default function Dashboard() {
 
 
     useEffect(() => {
-        socket?.emit("addUser", user?.id);
-        socket?.on("getUsers", (users) => {
-            console.log("active users-->", users);
-        })
+		socket?.emit('addUser', user?.id);
+		socket?.on('getUsers', users => {
+			console.log('activeUsers :>> ', users);
+		})
+		socket?.on('getMessage', data => {
+			setMessages(prev => ({
+				...prev,
+				messages: [...prev.messages, { user: data.user, message: data.message }]
+			}))
+		})
+	}, [socket]);
 
-        socket?.on("getMessage", (data) => {
-
-            setMessages(prev => ({
-                ...prev,
-                messages: [...prev.messages,{ user: data.senderId, message: data.message }]
-            }))
-        })
-    }, [socket]);
 
     useEffect(()=>{
         messagesRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -42,9 +41,9 @@ export default function Dashboard() {
 
     useEffect(() => {
         const fetchConversations = async () => {
-            const user = JSON.parse(localStorage.getItem('user:details'));
+            const loggedIn = JSON.parse(localStorage.getItem('user:details'));
             try {
-                const response = await fetch('http://localhost:8000/api/conversation/' + user._id);
+                const response = await fetch('http://localhost:8000/api/conversation/' + loggedIn._id);
                 const result = await response.json();
                 console.log("result-->", result);
                 setConversation(result);
