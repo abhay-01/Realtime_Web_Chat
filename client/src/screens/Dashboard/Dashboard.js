@@ -9,6 +9,7 @@ export default function Dashboard() {
     const [typeMessage, setTypeMessage] = useState('');
     const [people, setPeople] = useState([]);
     const [socket, setSocket] = useState(null);
+    const messagesRef = React.useRef(null);
 
     
 
@@ -35,6 +36,9 @@ export default function Dashboard() {
         })
     }, [socket]);
 
+    useEffect(()=>{
+        messagesRef.current?.scrollIntoView({ behavior: "smooth" });
+    },[messages?.messages])
 
     useEffect(() => {
         const fetchConversations = async () => {
@@ -205,16 +209,23 @@ export default function Dashboard() {
                                     if (user._id === id) {
 
                                         return (
+                                            <>
 
                                             <div className='max-w-[40%] bg-primary rounded-b-xl rounded-tl-xl ml-auto mt-5 p-1 text-white'>
                                                 {message}
                                             </div>
+
+                                            <div ref={messagesRef}></div>
+                                            </>
                                         )
                                     } else {
                                         return (
+                                            <>
                                             <div className='max-w-[40%] bg-secondary rounded-b-xl rounded-tr-xl mt-5 p-1'>
                                                 {message}
                                             </div>
+                                            <div ref={messagesRef}></div>
+                                            </>
                                         )
                                     }
 

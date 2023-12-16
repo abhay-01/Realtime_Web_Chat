@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const io = require('socket.io')(8001, {
     cors: {
-        origin: 'http://localhost:3000',
+        origin: process.env.CLIENT_URL || "http://localhost:3000",
     }
 });   // socket.io server
 
@@ -25,6 +25,7 @@ const Users = require('./models/user.model');
 const Conversation = require('./models/conversation.model');
 const Message = require('./models/messages.models');
 
+const PORT = process.env.PORT || 8000;
 
 //Socket.io
 
@@ -40,18 +41,18 @@ io.on('connection', socket => {
         }
     });
 
-    socket.on("sendMessage", async ({ senderId, receiverId, message,conversationId }) => {
+    socket.on("sendMessage", async ({ senderId, receiverId, message, conversationId }) => {
         const receiver = users.find(user => user.userId === receiverId);
         const sender = users.find(user => user.userId === senderId);
         const user = await Users.findById(senderId);
-        console.log("sender-->",sender,receiver)
+        console.log("sender-->", sender, receiver)
         if (receiver) {
             io.to(receiver.socketId).to(sender.socketId).emit("getMessage", {
                 senderId,
                 message,
                 conversationId,
                 receiverId,
-                user: {id: user._id, fullName: user.fullName, email: user.email}
+                user: { id: user._id, fullName: user.fullName, email: user.email }
             });
         }
     });
@@ -308,6 +309,6 @@ app.get("/api/users", async (req, res) => {
 })
 
 
-app.listen(8000, () => {
+app.listen(PORT, () => {
     console.log("Server is running at port 8000");
 })
